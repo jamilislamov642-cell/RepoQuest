@@ -1,10 +1,22 @@
 # Production deployment
 
-1. Deploy `backend/` with `backend/Dockerfile` to Railway, Render, Fly.io, or another HTTPS container host.
-2. Deploy `frontend/` to Vercel or a Node 20 container.
-3. Set `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, and `API_URL` to the production HTTPS URLs.
-4. Configure GitHub OAuth callback as `https://YOUR_API_DOMAIN/api/auth/github/callback`.
-5. Set `GITHUB_TOKEN` for higher GitHub API rate limits and `OPENAI_API_KEY` for stronger answers.
-6. Anonymous history is stored locally; authenticated multi-device history should use a database/session layer before production launch.
+## Vercel frontend
+1. Import this repository into Vercel.
+2. Set the project root to `frontend`.
+3. Set `NEXT_PUBLIC_API_URL` to the public HTTPS URL of the backend.
+4. Deploy with `npm install` and `npm run build`.
 
-Never commit `.env` files or OAuth secrets.
+## Render or Railway backend
+- Render: use `render.yaml` or deploy `backend/Dockerfile`.
+- Railway: use `railway.json` and set the service root/context as the repository root.
+- Configure `/health` as the health check.
+- Set `FRONTEND_URL`, `API_URL`, `GITHUB_TOKEN`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `OPENAI_API_KEY`, and `OPENAI_MODEL` as secrets.
+
+## Persistence warning
+The current SQLite history database is suitable for an MVP and requires persistent storage. Render is configured with a persistent disk. For horizontal scaling or Railway replicas, migrate `backend/app/db.py` to PostgreSQL and use a managed database.
+
+## OAuth
+GitHub callback URL:
+`https://YOUR_BACKEND_DOMAIN/api/auth/github/callback`
+
+Never commit secrets. Use HTTPS in production and change the session cookie to `secure=True` when deployed.
