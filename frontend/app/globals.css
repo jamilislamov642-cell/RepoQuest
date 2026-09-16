@@ -1,8 +1,10 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #f5f7fb;
-  color: #111827;
+  background:
+    radial-gradient(circle at top, rgba(124, 58, 237, 0.18), transparent 30%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  color: #0f172a;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -10,11 +12,275 @@ html, body {
   box-sizing: border-box;
 }
 
-h1, h2, h3, h4, p, ul, li {
-  margin-top: 0;
+button, input {
+  font: inherit;
 }
 
-ul {
-  padding-left: 18px;
+.page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.hero {
+  padding: 16px 0 28px;
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.hero-copy,
+.hero-card,
+.card,
+.quest-card {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 24px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.hero-copy {
+  padding: 32px 28px;
+}
+
+.hero-card {
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, #111827, #312e81);
+  color: white;
+}
+
+.eyebrow,
+.mini-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.hero-card .mini-label {
+  color: #c4b5fd;
+}
+
+.hero-copy h1 {
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  line-height: 1.02;
+  margin: 14px 0 16px;
+}
+
+.hero-copy p {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #475569;
   line-height: 1.7;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.input-row input,
+.chat-controls input {
+  width: 100%;
+  border: 1px solid #dfe4ee;
+  border-radius: 14px;
+  padding: 15px 16px;
+  background: rgba(255,255,255,0.9);
+  color: #0f172a;
+  outline: none;
+}
+
+.input-row input:focus,
+.chat-controls input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.input-row button,
+.chat-controls button,
+.quick-questions button {
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.input-row button,
+.chat-controls button {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: white;
+  padding: 15px 22px;
+  min-width: 180px;
+}
+
+.input-row button:hover,
+.chat-controls button:hover,
+.quick-questions button:hover {
+  transform: translateY(-1px);
+}
+
+.hero-card ul,
+.card ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+
+.card {
+  padding: 22px 20px;
+}
+
+.card h3,
+.card h4,
+.quest-card h4,
+.repo-header h2,
+.section-header h3 {
+  margin: 0;
+}
+
+.repo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 20px 24px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: #475569;
+  font-weight: 700;
+}
+
+.summary-grid,
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.highlight-card {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(79, 70, 229, 0.08));
+}
+
+.muted {
+  color: #475569;
+  line-height: 1.7;
+}
+
+.metrics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.second-grid {
+  margin-top: 18px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.quests-section,
+.chat-box {
+  margin-top: 28px;
+}
+
+.quest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.quest-card {
+  padding: 20px 18px;
+}
+
+.quest-badge {
+  display: inline-block;
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.quest-card p {
+  margin: 12px 0 0;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.chat-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.chat-answer {
+  background: linear-gradient(135deg, rgba(124,58,237,0.05), rgba(79,70,229,0.05));
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: #1f2937;
+  line-height: 1.7;
+  margin-top: 14px;
+}
+
+.quick-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.quick-questions button {
+  background: #eef2ff;
+  color: #312e81;
+  padding: 10px 12px;
+}
+
+.error-box {
+  margin-top: 14px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+@media (max-width: 900px) {
+  .hero-inner,
+  .summary-grid,
+  .metrics-grid,
+  .quest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input-row,
+  .chat-controls,
+  .repo-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-shell {
+    padding-top: 20px;
+  }
 }

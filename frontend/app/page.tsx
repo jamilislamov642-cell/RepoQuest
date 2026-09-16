@@ -12,14 +12,18 @@ type RepoData = {
   repo_name: string;
   description: string;
   stars: number;
+  forks: number;
   language: string;
   overview: string;
+  hero_message: string;
+  ai_summary: string;
   architecture: string[];
   entry_points: string[];
   core_files: string[];
   config_files: string[];
   docs_files: string[];
   tests_files: string[];
+  priority_files: string[];
   quest_board: Quest[];
   questions: string[];
 };
@@ -27,12 +31,16 @@ type RepoData = {
 export default function HomePage() {
   const [repoUrl, setRepoUrl] = useState("https://github.com/vercel/next.js");
   const [loading, setLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
   const [data, setData] = useState<RepoData | null>(null);
   const [error, setError] = useState("");
+  const [chatQuestion, setChatQuestion] = useState("How do I get started?");
+  const [chatAnswer, setChatAnswer] = useState("");
 
   async function handleAnalyze() {
     setLoading(true);
     setError("");
+    setChatAnswer("");
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/analyze`, {
         method: "POST",
@@ -53,80 +61,95 @@ export default function HomePage() {
     }
   }
 
+  async function handleAskRepo() {
+    if (!repoUrl || !data) return;
+    setChatLoading(true);
+    setChatAnswer("");
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: repoUrl, question: chatQuestion }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Chat request failed.");
+      }
+
+      const result = await res.json();
+      setChatAnswer(result.answer || "I couldn’t generate a reliable answer for that question yet.");
+    } catch (err) {
+      setChatAnswer("I couldn’t answer that yet. Try a more direct question like: How do I start? Where should a contributor begin?");
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 32 }}>
-      <div style={{ marginBottom: 32 }}>
-        <p style={{ color: "#7c3aed", fontWeight: 700, letterSpacing: 1 }}>REPOQUEST</p>
-        <h1 style={{ fontSize: 52, margin: "8px 0" }}>Turn any GitHub repo into a contribution game</h1>
-        <p style={{ fontSize: 18, color: "#555" }}>
-          Explore architecture, uncover beginner tasks, and discover where a contributor should start.
-        </p>
-      </div>
-
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-        <input
-          value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo"
-          style={{
-            flex: 1,
-            padding: "14px 16px",
-            borderRadius: 12,
-            border: "1px solid #ddd",
-            fontSize: 16,
-          }}
-        />
-        <button
-          onClick={handleAnalyze}
-          disabled={loading}
-          style={{
-            background: "#7c3aed",
-            color: "white",
-            border: "none",
-            borderRadius: 12,
-            fontSize: 16,
-            fontWeight: 700,
-            padding: "14px 22px",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "Analyzing..." : "Analyze repo"}
-        </button>
-      </div>
-
-      {error && (
-        <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 10 }}>
-          {error}
+    <main className="page-shell">
+      <section className="hero">
+        <div className="hero-inner">
+          <div className="hero-copy">
+            <div className="eyebrow">REPOQUEST</div>
+            <h1>Turn any GitHub repo into a contribution adventure.</h1>
+            <p>
+              Explore architecture, understand the flow, spot high-value files, and unlock contributor quests in minutes.
+            </p>
+            <div className="input-row">
+              <input
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                aria-label="GitHub repo URL"
+              />
+              <button onClick={handleAnalyze} disabled={loading}>
+                {loading ? "Analyzing..." : "Analyze repo"}
+              </button>
+            </div>
+            {error && <div className="error-box">{error}</div>}
+          </div>
+          <div className="hero-card">
+            <div className="mini-label">Repository preview</div>
+            <h3>How it works</h3>
+            <ul>
+              <li>Inspect architecture</li>
+              <li>Find contributor entry points</li>
+              <li>Generate beginner quests</li>
+              <li>Answer repo questions</li>
+            </ul>
+          </div>
         </div>
-      )}
+      </section>
 
       {data && (
         <>
-          <section
-            style={{
-              background: "linear-gradient(135deg, #111827, #312e81)",
-              color: "white",
-              borderRadius: 18,
-              padding: 26,
-              marginBottom: 24,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <p style={{ margin: 0, opacity: 0.8 }}>Repository</p>
-                <h2 style={{ margin: 0, fontSize: 28 }}>{data.repo_name}</h2>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div>⭐ {data.stars}</div>
-                <div>{data.language}</div>
-              </div>
+          <section className="repo-header card">
+            <div>
+              <div className="mini-label">Repository</div>
+              <h2>{data.repo_name}</h2>
             </div>
-
-            <p style={{ marginTop: 16, fontSize: 17 }}>{data.description}</p>
-            <p style={{ marginTop: 12, color: "#dbeafe" }}>{data.overview}</p>
+            <div className="stats-row">
+              <span>⭐ {data.stars}</span>
+              <span>🍴 {data.forks}</span>
+              <span>{data.language}</span>
+            </div>
           </section>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18 }}>
+          <section className="summary-grid">
+            <div className="card highlight-card">
+              <div className="mini-label">AI summary</div>
+              <p>{data.hero_message}</p>
+              <p className="muted">{data.ai_summary}</p>
+            </div>
+            <div className="card">
+              <div className="mini-label">Description</div>
+              <p>{data.description || "No description provided."}</p>
+              <p className="muted">{data.overview}</p>
+            </div>
+          </section>
+
+          <section className="metrics-grid">
             <Card title="Architecture">
               <ul>
                 {data.architecture.map((item) => (
@@ -135,58 +158,75 @@ export default function HomePage() {
               </ul>
             </Card>
 
-            <Card title="Likely entry points">
+            <Card title="Priority files">
+              <ul>
+                {data.priority_files.length ? data.priority_files.map((item) => <li key={item}>{item}</li>) : <li>No priority files detected.</li>}
+              </ul>
+            </Card>
+
+            <Card title="Entry points">
               <ul>
                 {data.entry_points.length ? data.entry_points.map((item) => <li key={item}>{item}</li>) : <li>No entry points found.</li>}
               </ul>
             </Card>
+          </section>
 
+          <section className="metrics-grid second-grid">
             <Card title="Core files">
               <ul>
                 {data.core_files.length ? data.core_files.map((item) => <li key={item}>{item}</li>) : <li>No core files detected.</li>}
               </ul>
             </Card>
-          </div>
 
-          <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 18 }}>
             <Card title="Config / setup">
               <ul>
                 {data.config_files.length ? data.config_files.map((item) => <li key={item}>{item}</li>) : <li>No config files detected.</li>}
               </ul>
             </Card>
 
-            <Card title="Docs">
+            <Card title="Tests / docs">
               <ul>
-                {data.docs_files.length ? data.docs_files.map((item) => <li key={item}>{item}</li>) : <li>No docs detected.</li>}
+                {data.tests_files.length ? data.tests_files.map((item) => <li key={item}>{item}</li>) : <li>No tests detected.</li>}
               </ul>
             </Card>
+          </section>
 
-            <Card title="Tests">
-              <ul>
-                {data.tests_files.length ? data.tests_files.map((item) => <li key={item}>{item}</li>) : <li>No test files detected.</li>}
-              </ul>
-            </Card>
-          </div>
-
-          <div style={{ marginTop: 30 }}>
-            <h3>Quest board</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          <section className="quests-section">
+            <div className="section-header">
+              <h3>Quest board</h3>
+            </div>
+            <div className="quest-grid">
               {data.quest_board.map((quest) => (
-                <div key={quest.title} style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: 18 }}>
-                  <p style={{ color: "#7c3aed", fontWeight: 700 }}>{quest.difficulty}</p>
+                <div key={quest.title} className="quest-card">
+                  <span className="quest-badge">{quest.difficulty}</span>
                   <h4>{quest.title}</h4>
-                  <p style={{ color: "#4b5563" }}>{quest.description}</p>
+                  <p>{quest.description}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div style={{ marginTop: 30 }}>
-            <h3>Questions you could ask</h3>
-            <ul>
-              {data.questions.map((q) => <li key={q}>{q}</li>)}
-            </ul>
-          </div>
+          <section className="chat-box card">
+            <div className="section-header">
+              <h3>Ask about this repo</h3>
+            </div>
+            <div className="chat-controls">
+              <input
+                value={chatQuestion}
+                onChange={(e) => setChatQuestion(e.target.value)}
+                placeholder="e.g. How do I start? Where should I contribute?"
+              />
+              <button onClick={handleAskRepo} disabled={chatLoading}>
+                {chatLoading ? "Thinking..." : "Ask"}
+              </button>
+            </div>
+            {chatAnswer && <div className="chat-answer">{chatAnswer}</div>}
+            <div className="quick-questions">
+              {data.questions.slice(0, 4).map((q) => (
+                <button key={q} onClick={() => setChatQuestion(q)}>{q}</button>
+              ))}
+            </div>
+          </section>
         </>
       )}
     </main>
@@ -195,8 +235,8 @@ export default function HomePage() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 18, padding: 18, background: "#fff" }}>
-      <h3>{title}</h3>
+    <div className="card">
+      <div className="mini-label">{title}</div>
       {children}
     </div>
   );
