@@ -1,66 +1,82 @@
-# RepoQuest
+"use client";
 
-RepoQuest turns any GitHub repository into a guided contribution adventure.
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-## What it does
-- Analyze a public GitHub repo in seconds
-- Detect architecture, key modules, and likely entry points
-- Generate a contributor-ready quest board
-- Highlight priority files and low-risk onboarding paths
-- Answer repo questions in plain English
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-## Why it stands out
-Most developers don’t need another generic repo analyzer. They need a way to understand a codebase quickly and confidently contribute.
+export default function SharePage({ params }: { params: { owner: string; repo: string } }) {
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
 
-RepoQuest turns repo exploration into a guided, approachable workflow.
+  useEffect(() => {
+    fetch(`${API}/api/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repo_url: `https://github.com/${params.owner}/${params.repo}` }),
+    })
+      .then((res) => res.json())
+      .then(setData)
+      .catch(() => setError("This repository could not be loaded."));
+  }, [params.owner, params.repo]);
 
-## Tech stack
-- Frontend: Next.js + TypeScript
-- Backend: FastAPI + Python
-- GitHub API: repo metadata, tree, and file insights
-- Architecture: lightweight rule-based analysis + optional OpenAI API integration
+  if (error) {
+    return (
+      <main className="page-shell">
+        <p>{error}</p>
+        <Link href="/">Back to RepoQuest</Link>
+      </main>
+    );
+  }
 
-## Run locally
+  if (!data) {
+    return (
+      <main className="page-shell">
+        <p>Loading public repo map…</p>
+      </main>
+    );
+  }
 
-### Backend
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+  return (
+    <main className="page-shell">
+      <nav className="nav">
+        <Link href="/" className="brand">◈ RepoQuest</Link>
+        <a href={data.repo_url} target="_blank" rel="noreferrer">View on GitHub ↗</a>
+      </nav>
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+      <section className="hero-copy card">
+        <div className="eyebrow">PUBLIC REPO QUEST</div>
+        <h1>{data.repo_name}</h1>
+        <p>{data.description}</p>
+        <p className="muted">{data.overview}</p>
+      </section>
 
-Open:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000/docs
+      <section className="graph-section card">
+        <div className="mini-label">Architecture map</div>
+        <div className="repo-graph">
+          {data.graph.nodes.filter((n: any) => n.type === "category").map((category: any) => (
+            <div className="graph-column" key={category.id}>
+              <div className="graph-category">{category.label}</div>
+              {data.graph.nodes.filter((n: any) => n.category === category.id).map((node: any) => (
+                <div className="graph-file" key={node.id}>{node.label}</div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
 
-## Example repo
-```text
-https://github.com/vercel/next.js
-```
-
-## Demo vision
-Users paste a repo URL and instantly see:
-- architecture overview
-- likely entry points
-- contributor-friendly tasks
-- repo-specific Q&A
-
-## Future enhancements
-- repo graph visualization
-- markdown report export
-- GitHub App integration
-- PR analysis and change summaries
-- repository comparison mode
-- shareable public repo pages
-
-## License
-MIT
+      <section className="quests-section">
+        <h2>Contributor quests</h2>
+        <div className="quest-grid">
+          {data.quest_board.map((quest: any) => (
+            <div className="quest-card" key={quest.title}>
+              <span className="quest-badge">{quest.difficulty}</span>
+              <h3>{quest.title}</h3>
+              <p>{quest.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
