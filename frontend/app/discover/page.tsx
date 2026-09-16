@@ -1,67 +1,273 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-type RepoCard = {
-  id: number;
-  full_name: string;
-  html_url: string;
-  description: string | null;
-  stargazers_count: number;
-  language: string | null;
-  topics?: string[];
+type RepoData = {
+  repo_name: string;
+  repo_url: string;
+  owner: string;
+  repo: string;
+  stars: number;
+  forks: number;
+  language: string;
+  description: string;
+  overview: string;
+  architecture: string[];
+  priority_files: string[];
+  quest_board: { title: string; difficulty: string; description: string }[];
+  questions: string[];
+  files: Record<string, string[]>;
+  graph: { nodes: { id: string; label: string; path?: string; type: string; category?: string }[]; edges: { source: string; target: string }[] };
 };
 
-export default function DiscoverPage() {
-  const [query, setQuery] = useState("developer tools");
-  const [repos, setRepos] = useState<RepoCard[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+type SessionState = {
+  authenticated: boolean;
+  user: { login: string; name: string; avatar_url?: string } | null;
+};
 
-  async function discover(nextQuery = query) {
+export default function HomePage() {
+  const [repoUrl, setRepoUrl] = useState("https://github.com/vercel/next.js");
+  const [loading, setLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [data, setData] = useState<RepoData | null>(null);
+  const [error, setError] = useState("");
+  const [question, setQuestion] = useState("How do I get started?");
+  const [answer, setAnswer] = useState("");
+  const [history, setHistory] = useState<{ repo_url: string; repo_name: string }[]>([]);
+  const [session, setSession] = useState<SessionState>({ authenticated: false, user: null });
+
+  useEffect(() => {
+    fetch(`${API}/api/session`, { credentials: "include" })
+      .then((r) => r.json())
+      .then(setSession)
+      .catch(() => setSession({ authenticated: false, user: null }));
+    fetch(`${API}/api/history`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((res) => setHistory(res.items || []))
+      .catch(() => setHistory([]));
+  }, []);
+
+  async function handleAnalyze() {
     setLoading(true);
     setError("");
+    setAnswer("");
     try {
-      const response = await fetch(`${API}/api/discover?q=${encodeURIComponent(nextQuery)}`);
-      if (!response.ok) throw new Error("Discovery request failed");
+      const response = await fetch(`${API}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: repoUrl }),
+      });
+      if (!response.ok) throw new Error();
       const result = await response.json();
-      setRepos(result.items || []);
+      setData(result);
+      if (session.authenticated) {
+        await fetch(`${API}/api/history`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ repo_url: result.repo_url, repo_name: result.repo_name }),
+        });
+        const historyRes = await fetch(`${API}/api/history`, { credentials: "include" });
+        const historyData = await historyRes.json();
+        setHistory(historyData.items || []);
+      }
     } catch {
-      setError("Discovery is temporarily unavailable. Try again in a moment.");
+      setError("Analysis failed. Please use a valid public GitHub repository URL.");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { discover("developer tools"); }, []);
+  async function handleAskRepo() {
+    if (!data) return;
+    setChatLoading(true);
+    try {
+      const response = await fetch(`${API}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_url: data.repo_url, question }),
+      });
+      const result = await response.json();
+      setAnswer(result.answer || "I could not generate an answer for that repo yet.");
+    } catch {
+      setAnswer("I could not answer that yet. Try a direct question like: How do I start? Where should I contribute?");
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function loginWithGitHub() {
+    window.location.href = `${API}/api/auth/github`;
+  }
+
+  const shareUrl = useMemo(() => {
+    if (!data || typeof window === "undefined") return "";
+    return `${window.location.origin}/share/${data.owner}/${data.repo}`;
+  }, [data]);
+
+  async function copyShareLink() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+  }
 
   return (
     <main className="page-shell">
-      <nav className="nav"><Link href="/" className="brand">◈ RepoQuest</Link><span className="muted">Discover interesting codebases</span></nav>
-      <section className="hero-copy card discover-hero">
-        <div className="eyebrow">DISCOVER</div>
-        <h1>Find your next repository quest.</h1>
-        <p>Explore popular, growing, and contributor-friendly projects through RepoQuest.</p>
-        <form className="input-row" onSubmit={(event) => { event.preventDefault(); discover(); }}>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search GitHub repositories" />
-          <button disabled={loading}>{loading ? "Searching..." : "Search"}</button>
-        </form>
+      <nav className="nav">
+        <Link href="/" className="brand">◈ RepoQuest</Link>
+        <div className="nav-actions">
+          <Link href="/discover" className="nav-link">Discover</Link>
+          {session.authenticated && session.user ? (
+            <>
+              <span className="user-pill">{session.user.login}</span>
+              <button className="ghost" onClick={() => (window.location.href = `${API}/api/logout`)}>Log out</button>
+            </>
+          ) : (
+            <button className="ghost" onClick={loginWithGitHub}>Sign in with GitHub</button>
+          )}
+        </div>
+      </nav>
+
+      <section className="hero">
+        <div className="hero-copy">
+          <div className="eyebrow">CODEBASE INTELLIGENCE</div>
+          <h1>Understand any repo. Find your path in.</h1>
+          <p>RepoQuest turns unfamiliar GitHub repositories into visual maps, contributor quests, and practical answers.</p>
+          <div className="input-row">
+            <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repo" />
+            <button onClick={handleAnalyze} disabled={loading}>{loading ? "Mapping..." : "Explore repo"}</button>
+          </div>
+          {error && <div className="error-box">{error}</div>}
+        </div>
+
+        <div className="hero-card">
+          <div className="mini-label">Your onboarding co-pilot</div>
+          <h3>From confusion to contribution.</h3>
+          <ul>
+            <li>Architecture graph</li>
+            <li>Priority file map</li>
+            <li>Task-based onboarding</li>
+            <li>Repo-specific answers</li>
+          </ul>
+        </div>
       </section>
-      {error && <div className="error-box">{error}</div>}
-      <section className="discover-grid">
-        {repos.map((repo) => {
-          const [owner, name] = repo.full_name.split("/");
-          return <article className="repo-card card" key={repo.id}>
-            <div className="repo-card-top"><span className="language-dot" /> <span>{repo.language || "Various"}</span><span className="stars">★ {repo.stargazers_count.toLocaleString()}</span></div>
-            <h3>{repo.full_name}</h3>
-            <p>{repo.description || "No description provided."}</p>
-            <div className="card-actions"><Link className="primary-link" href={`/share/${owner}/${name}`}>Open quest</Link><a href={repo.html_url} target="_blank" rel="noreferrer">GitHub ↗</a></div>
-          </article>;
-        })}
-      </section>
+
+      {history.length > 0 && (
+        <section className="history card">
+          <div className="mini-label">Recent explorations</div>
+          <div className="history-list">
+            {history.map((item) => (
+              <button key={item.repo_url} onClick={() => { setRepoUrl(item.repo_url); handleAnalyze(); }}>
+                {item.repo_name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {data && (
+        <>
+          <section className="repo-header card">
+            <div>
+              <div className="mini-label">Repository</div>
+              <h2>{data.repo_name}</h2>
+              <p>{data.description}</p>
+            </div>
+            <div className="stats-row">
+              <span>⭐ {data.stars}</span>
+              <span>🍴 {data.forks}</span>
+              <span>{data.language}</span>
+              {shareUrl && <button className="share-button" onClick={copyShareLink}>Copy share link</button>}
+            </div>
+          </section>
+
+          <section className="summary-grid">
+            <div className="card highlight-card">
+              <div className="mini-label">Recommended path</div>
+              <p>{data.overview}</p>
+              <strong>Start with {data.priority_files[0] || "the README"}</strong>
+            </div>
+            <div className="card">
+              <div className="mini-label">Architecture signals</div>
+              <ul>
+                {data.architecture.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          </section>
+
+          <section className="graph-section card">
+            <div className="section-header">
+              <div>
+                <div className="mini-label">Architecture map</div>
+                <h3>Repo graph</h3>
+              </div>
+              <span className="muted">{data.graph.nodes.length} nodes · {data.graph.edges.length} links</span>
+            </div>
+            <div className="repo-graph">
+              {data.graph.nodes.filter((node) => node.type === "category").map((category) => (
+                <div className="graph-column" key={category.id}>
+                  <div className="graph-category">{category.label}</div>
+                  {data.graph.nodes.filter((node) => node.category === category.id).map((node) => (
+                    <div className="graph-file" key={node.id} title={node.path || node.label}>{node.label}</div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="metrics-grid">
+            {[
+              ["Priority files", data.priority_files],
+              ["Entry points", data.files.entry_points],
+              ["Core files", data.files.core_files],
+              ["Config", data.files.config_files],
+              ["Tests", data.files.tests_files],
+              ["Docs", data.files.docs_files],
+            ].map(([title, items]) => (
+              <div className="card" key={String(title)}>
+                <div className="mini-label">{String(title)}</div>
+                <ul>
+                  {(items as string[]).length ? (items as string[]).map((item) => <li key={item}>{item}</li>) : <li>None detected</li>}
+                </ul>
+              </div>
+            ))}
+          </section>
+
+          <section className="quests-section">
+            <div className="section-header">
+              <h3>Quest board</h3>
+            </div>
+            <div className="quest-grid">
+              {data.quest_board.map((quest) => (
+                <div className="quest-card" key={quest.title}>
+                  <span className="quest-badge">{quest.difficulty}</span>
+                  <h4>{quest.title}</h4>
+                  <p>{quest.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="chat-box card">
+            <div className="section-header">
+              <h3>Ask RepoQuest</h3>
+              <span className="muted">Answers use the analyzed file map</span>
+            </div>
+            <div className="chat-controls">
+              <input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAskRepo()} />
+              <button onClick={handleAskRepo} disabled={chatLoading}>{chatLoading ? "Thinking..." : "Ask"}</button>
+            </div>
+            {answer && <div className="chat-answer">{answer}</div>}
+            <div className="quick-questions">
+              {data.questions.map((item) => (
+                <button key={item} onClick={() => setQuestion(item)}>{item}</button>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }

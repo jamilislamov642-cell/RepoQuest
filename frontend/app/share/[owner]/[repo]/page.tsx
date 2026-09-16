@@ -1,1 +1,82 @@
-html,body{margin:0;padding:0;background:radial-gradient(circle at top,rgba(124,58,237,.18),transparent 30%),linear-gradient(180deg,#f8fafc,#eef2ff);color:#0f172a;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}button,input{font:inherit}.page-shell{max-width:1200px;margin:auto;padding:20px 20px 64px}.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.brand{font-weight:900;font-size:20px;color:#111827;text-decoration:none}.nav-actions,.stats-row,.history-list,.quick-questions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ghost,.history-list button,.quick-questions button,.share-button{border:1px solid #ddd6fe;background:#fff;color:#5b21b6;padding:9px 12px;border-radius:10px;cursor:pointer}.history-count,.muted,.repo-header p{color:#64748b}.user-pill{padding:8px 10px;background:#eef2ff;border-radius:999px;color:#312e81;font-weight:700}.hero{display:grid;grid-template-columns:1.5fr .8fr;gap:20px}.hero-copy,.hero-card,.card,.quest-card{background:rgba(255,255,255,.84);border:1px solid rgba(148,163,184,.2);border-radius:22px;box-shadow:0 14px 30px rgba(15,23,42,.06)}.hero-copy{padding:42px 30px}.hero-card{padding:28px;background:linear-gradient(135deg,#111827,#312e81);color:#fff}.eyebrow,.mini-label{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:700;color:#7c3aed}.hero-card .mini-label{color:#c4b5fd}.hero h1{font-size:clamp(2.5rem,5vw,4.4rem);line-height:1.01;margin:14px 0}.hero p{color:#475569;line-height:1.7}.input-row,.chat-controls{display:flex;gap:10px;margin-top:22px}.input-row input,.chat-controls input{flex:1;border:1px solid #dfe4ee;border-radius:12px;padding:14px;outline:none}.input-row button,.chat-controls button{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-weight:700;cursor:pointer}.error-box{margin-top:14px;background:#fee2e2;color:#991b1b;border-radius:10px;padding:12px}.card{padding:22px 20px}.history{margin-top:18px}.history-list{margin-top:12px}.repo-header{display:flex;justify-content:space-between;align-items:center;margin-top:20px}.repo-header h2{margin:6px 0}.stats-row{justify-content:flex-end;color:#475569;font-weight:700}.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.highlight-card{background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(79,70,229,.08))}.card ul{padding-left:18px;line-height:1.8}.graph-section{margin-top:18px}.repo-graph{display:flex;gap:14px;overflow-x:auto;padding:20px 4px 8px;background:linear-gradient(90deg,#f8fafc,#eef2ff);border-radius:16px}.graph-column{min-width:170px;display:flex;flex-direction:column;gap:8px}.graph-category{background:#312e81;color:#fff;border-radius:10px;padding:10px;font-weight:700;text-align:center}.graph-file{background:#fff;border:1px solid #ddd6fe;border-radius:9px;padding:8px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}.quests-section,.chat-box{margin-top:28px}.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.section-header h3{margin:0}.quest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.quest-card{padding:20px}.quest-badge{display:inline-block;background:#ede9fe;color:#6d28d9;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}.quest-card p{color:#4b5563;line-height:1.7}.chat-answer{margin-top:14px;padding:16px;border-radius:14px;background:#f5f3ff;border:1px solid #ddd6fe;line-height:1.7}.quick-questions{margin-top:14px}.quick-questions button{font-size:13px}@media(max-width:850px){.hero,.summary-grid,.metrics-grid,.quest-grid{grid-template-columns:1fr}.repo-header{display:block}.stats-row{justify-content:flex-start;margin-top:14px}.input-row,.chat-controls{flex-direction:column}}
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+type RepoCard = {
+  id: number;
+  full_name: string;
+  html_url: string;
+  description: string | null;
+  stargazers_count: number;
+  language: string | null;
+};
+
+export default function DiscoverPage() {
+  const [query, setQuery] = useState("developer tools");
+  const [repos, setRepos] = useState<RepoCard[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function discover(nextQuery = query) {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${API}/api/discover?q=${encodeURIComponent(nextQuery)}`);
+      if (!response.ok) throw new Error("Failed");
+      const result = await response.json();
+      setRepos(result.items || []);
+    } catch {
+      setError("Discovery is temporarily unavailable. Try again in a moment.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    discover("developer tools");
+  }, []);
+
+  return (
+    <main className="page-shell">
+      <nav className="nav">
+        <Link href="/" className="brand">◈ RepoQuest</Link>
+        <Link href="/" className="nav-link">Home</Link>
+      </nav>
+
+      <section className="hero-copy card discover-hero">
+        <div className="eyebrow">DISCOVER</div>
+        <h1>Find your next repository quest.</h1>
+        <p>Explore popular and contributor-friendly repositories across GitHub.</p>
+        <form className="input-row" onSubmit={(event) => { event.preventDefault(); discover(); }}>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search GitHub repositories" />
+          <button disabled={loading}>{loading ? "Searching..." : "Search"}</button>
+        </form>
+      </section>
+
+      {error && <div className="error-box">{error}</div>}
+
+      <section className="discover-grid">
+        {repos.map((repo) => {
+          const [owner, name] = repo.full_name.split("/");
+          return (
+            <article className="repo-card card" key={repo.id}>
+              <div className="repo-card-top">
+                <span className="language-pill">{repo.language || "Various"}</span>
+                <span className="stars">★ {repo.stargazers_count.toLocaleString()}</span>
+              </div>
+              <h3>{repo.full_name}</h3>
+              <p>{repo.description || "No description provided."}</p>
+              <div className="card-actions">
+                <Link className="primary-link" href={`/share/${owner}/${name}`}>Open quest</Link>
+                <a href={repo.html_url} target="_blank" rel="noreferrer">GitHub ↗</a>
+              </div>
+            </article>
+          );
+        })}
+      </section>
+    </main>
+  );
+}
